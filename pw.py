@@ -32,13 +32,13 @@ def pw_directory_entries(path, extension):
     return found
 
 def choose_given_existing(user_input, existing_list, allow_unknown=True):
-    if user_input in existing_list and user_input != "":
+    if user_input in existing_list and (user_input != "" or len(existing_list) == 1):
         return user_input
     else:
         # Match to existing entries by inclusion
         matching = filter(lambda site: re.search(user_input, site), existing_list)
         if len(matching) == 1 and user_input != "":
-            return user_input
+            return matching[0]
         elif len(matching) == 0 and allow_unknown:
             return user_input
 
