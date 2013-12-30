@@ -12,6 +12,7 @@ import stat
 PATH = os.path.join(os.environ['HOME'], '.passwords/')
 SYSTEM_USER = "alice"
 IDENTITIES = ["alice@example.org"] # For GPG
+GPG_AGENT = true
 ##
 
 secure_random = SystemRandom()
@@ -163,6 +164,8 @@ def main():
         print pw
         output_file = open(uname_file, "w")
         gpg_invocation = ["gpg", "--encrypt"]
+        if not GPG_AGENT:
+            gpg_invocation.append("--no-use-agent")
         for recipient in IDENTITIES:
             gpg_invocation.extend(["--recipient", recipient])
         gpg_process = subprocess.Popen(
