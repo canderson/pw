@@ -16,6 +16,8 @@ IDENTITIES = ["alice@example.org"] # For GPG
 
 secure_random = SystemRandom()
 
+class GitAnnexException(Exception): pass
+
 def generate_pw(length=20):
     out = []
     for i in range(0,length):
@@ -53,21 +55,27 @@ def choose_given_existing(user_input, existing_list, allow_unknown=True):
         return raw_input("Selected name: ")
 
 def check_permissions(path):
-    user_data = getpwnam('christian')
+    user_data = getpwnam(SYSTEM_USER)
     uid = user_data.pw_uid
     gid = user_data.pw_gid
     directory_data = os.stat(path)
     if directory_data.st_uid != uid: return False
     if directory_data.st_gid != gid: return False
-    # Others rwx should be 000
+    # Others rwx should be 0
     if directory_data.st_mode & stat.S_IRWXO: return False
     return True
+
+def run_git(invocation):
+    result = subprocess.call(
+        ["git"] + invocation)
+    if result != 0:
+        raise GitAnnexException, "Exit code " + str(result) + " when running " \
+            "git with invocation `" + " ".join(invocation) + "`"
 
 def configure_annex(path):
     if os.path.exists(os.path.join(path, ".git")): return
     os.system("git init %s" % path)
-    os.system("git annex init %s" % path)
-    return
+    run_git(["annex", "init", path])
 
 def parse_input():
     try:
@@ -137,7 +145,7 @@ def main():
             sure = raw_input("Are you sure you want to change the pw [y/N]: ")
             if sure.lower() not in ("y","yes"):
                 exit()
-            os.system("git annex unlock %s" % uname_file)
+            run_git(["annex", "unlock", uname_file])
             verb = "Updating"
         else:
             verb = "Creating"
@@ -162,9 +170,9 @@ def main():
             stdin=subprocess.PIPE,
             stdout=output_file)
         gpg_process.communicate(input=pw)
-        os.system("git annex add %s" % uname_file)
+        run_git(["annex", "add", uname_file])
         commit_description = '"' + verb + " " + "password for " + site + ":" + uname + '"'
-        os.system("git commit -m %s" % commit_description)
+        run_git(["commit", "-m", commit_description])
     else:
         # Unknown command
         assert(False)
